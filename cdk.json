@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/bps-test-project.ts",
+  "app": "npx ts-node --project tsconfig.cdk.json --transpile-only --prefer-ts-exts bin/app-dev.ts",
   "watch": {
     "include": [
       "**"
