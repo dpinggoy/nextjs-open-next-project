@@ -50,7 +50,7 @@ async function setupOIDCProvider(iam, region) {
   }
 }
 
-async function setupRole(iam, roleName, repo, providerArn) {
+async function setupRole(iam, roleName, repo, branch, providerArn) {
   const trustPolicy = {
     Version: '2012-10-17',
     Statement: [{
@@ -62,7 +62,7 @@ async function setupRole(iam, roleName, repo, providerArn) {
           'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
         },
         StringLike: {
-          'token.actions.githubusercontent.com:sub': `repo:${repo}:*`
+          'token.actions.githubusercontent.com:sub': `repo:${repo}:ref:refs/heads/${branch}`
         }
       }
     }]
@@ -70,7 +70,7 @@ async function setupRole(iam, roleName, repo, providerArn) {
 
   try {
     const { Role } = await iam.send(new GetRoleCommand({ RoleName: roleName }));
-    console.log('Role already exists, updating trust policy');
+    console.log(`Role ${roleName} already exists, updating trust policy`);
     
     await iam.send(new UpdateAssumeRolePolicyCommand({
       RoleName: roleName,
@@ -83,9 +83,9 @@ async function setupRole(iam, roleName, repo, providerArn) {
       const { Role } = await iam.send(new CreateRoleCommand({
         RoleName: roleName,
         AssumeRolePolicyDocument: JSON.stringify(trustPolicy),
-        Description: 'Role for GitHub Actions deployments'
+        Description: `Role for GitHub Actions deployments - ${branch} branch`
       }));
-      console.log('Created IAM role');
+      console.log(`Created IAM role ${roleName}`);
       return Role.Arn;
     }
     throw err;
@@ -98,14 +98,14 @@ async function attachPolicy(iam, roleName) {
       RoleName: roleName,
       PolicyArn: 'arn:aws:iam::aws:policy/AdministratorAccess'
     }));
-    console.log('Attached permissions');
+    console.log(`Attached permissions to ${roleName}`);
   } catch (err) {
     if (err.name !== 'EntityAlreadyExists') throw err;
   }
 }
 
 async function main() {
-  console.log('\nGitHub OIDC Setup for AWS\n');
+  console.log('\nGitHub OIDC Setup for AWS (Multi-Environment)\n');
   
   const githubOrg = await ask('GitHub username or org: ');
   const githubRepo = await ask('Repository name: ');
@@ -126,35 +126,69 @@ async function main() {
   console.log('\nSetting up OIDC...');
   
   const iam = new IAMClient({ region });
-  const roleName = 'GitHubActionsDeployRole';
   
   const providerArn = await setupOIDCProvider(iam, region);
-  const roleArn = await setupRole(iam, roleName, repo, providerArn);
-  await attachPolicy(iam, roleName);
+  
+  const environments = [
+    { name: 'dev', branch: 'dev', roleName: 'GitHubActionsDeployRole-Dev' },
+    { name: 'staging', branch: 'staging', roleName: 'GitHubActionsDeployRole-Staging' },
+    { name: 'prod', branch: 'main', roleName: 'GitHubActionsDeployRole-Prod' }
+  ];
+  
+  const roleArns = {};
+  
+  console.log('\nCreating roles for each environment...\n');
+  
+  for (const env of environments) {
+    console.log(`Setting up ${env.name}...`);
+    const roleArn = await setupRole(iam, env.roleName, repo, env.branch, providerArn);
+    await attachPolicy(iam, env.roleName);
+    roleArns[env.name] = { roleArn, branch: env.branch };
+    console.log('');
+  }
   
   const sts = new STSClient({ region });
   const { Account } = await sts.send(new GetCallerIdentityCommand({}));
   
-  console.log(`\nSetup complete!`);
-  console.log(`AWS Account: ${Account}`);
+  console.log(`Setup complete!`);
+  console.log(`AWS Account: ${Account}\n`);
   
   const config = `
-GitHub OIDC Configuration
+GitHub OIDC Configuration (Multi-Environment)
 Date: ${new Date().toISOString()}
 Repository: ${repo}
 Region: ${region}
 
 OIDC Provider: ${providerArn}
-Role ARN: ${roleArn}
-Role Name: ${roleName}
+
+Development Environment (dev branch):
+Role ARN: ${roleArns.dev.roleArn}
+Branch: ${roleArns.dev.branch}
+
+Staging Environment (staging branch):
+Role ARN: ${roleArns.staging.roleArn}
+Branch: ${roleArns.staging.branch}
+
+Production Environment (main branch):
+Role ARN: ${roleArns.prod.roleArn}
+Branch: ${roleArns.prod.branch}
 
 Add these secrets to GitHub:
 https://github.com/${repo}/settings/secrets/actions
 
-AWS_ROLE_ARN
-${roleArn}
+For Development environment:
+AWS_ROLE_ARN_DEV
+${roleArns.dev.roleArn}
 
-AWS_REGION
+For Staging environment:
+AWS_ROLE_ARN_STAGING
+${roleArns.staging.roleArn}
+
+For Production environment:
+AWS_ROLE_ARN_PROD
+${roleArns.prod.roleArn}
+
+AWS_REGION (same for all):
 ${region}
 
 Then delete these old secrets if they exist:
@@ -164,14 +198,21 @@ Then delete these old secrets if they exist:
 
   fs.writeFileSync('github-oidc-config.txt', config);
   
-  console.log('\nAdd these GitHub secrets:');
-  console.log(`\nAWS_ROLE_ARN`);
-  console.log(roleArn);
-  console.log(`\nAWS_REGION`);
+  console.log('Add these GitHub secrets:\n');
+  console.log('AWS_ROLE_ARN_DEV');
+  console.log(roleArns.dev.roleArn);
+  console.log('');
+  console.log('AWS_ROLE_ARN_STAGING');
+  console.log(roleArns.staging.roleArn);
+  console.log('');
+  console.log('AWS_ROLE_ARN_PROD');
+  console.log(roleArns.prod.roleArn);
+  console.log('');
+  console.log('AWS_REGION');
   console.log(region);
   console.log(`\nConfig saved to github-oidc-config.txt`);
-  console.log(`\nNote: Currently using AdministratorAccess`);
-  console.log(`Run create-minimal-policy.js for better security`);
+  console.log(`\nNote: Each role is restricted to its specific branch`);
+  console.log(`Run create-minimal-policy-multi-env.js for better security`);
 }
 
 main().catch(err => {

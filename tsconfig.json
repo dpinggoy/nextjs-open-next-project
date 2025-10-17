@@ -21,7 +21,8 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "types": ["jest", "@testing-library/jest-dom"]
   },
   "include": [
     "next-env.d.ts",
@@ -29,7 +30,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "bin/**/*.ts",
-    "lib/**/*.ts"
+    "lib/**/*.ts",
+    "jest.setup.js"
   ],
   "exclude": [
     "node_modules",

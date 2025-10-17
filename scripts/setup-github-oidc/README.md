@@ -1,134 +1,167 @@
-# Getting Started
+# GitHub OIDC Setup
 
-## What This Does
+Quick setup for secure GitHub Actions authentication with AWS.
 
-Sets up secure authentication between GitHub Actions and AWS. Instead of storing AWS credentials in GitHub, your workflows get temporary credentials that expire after an hour.
+## Recommended Setup: Multi-Environment with GitHub Environments
 
-## Quick Start
+This creates separate AWS roles for dev, staging, and production, with secrets organized in GitHub Environments.
 
-Create a folder for the setup files:
-```bash
-mkdir github-oidc-setup
-cd github-oidc-setup
-```
+### Step 1: Run Setup Script
 
-Copy these files into the folder:
-- setup-github-oidc.js
-- create-minimal-policy.js  
-- package.json
-
-Install dependencies:
 ```bash
 npm install
-```
-
-Run setup:
-```bash
-node setup-github-oidc.js
+npm run setup:multi-env
 ```
 
 Answer the prompts:
-```
-GitHub username or org: yourusername
-Repository name: your-repo
-AWS region (default us-east-1): [press enter]
-```
+- GitHub username/org
+- Repository name  
+- AWS region (just hit enter for us-east-1)
 
-The script will show you two values:
-```
-AWS_ROLE_ARN
-arn:aws:iam::123456789012:role/GitHubActionsDeployRole
+The script creates three roles:
+- `GitHubActionsDeployRole-Dev` - restricted to `dev` branch
+- `GitHubActionsDeployRole-Staging` - restricted to `staging` branch
+- `GitHubActionsDeployRole-Prod` - restricted to `main` branch
 
-AWS_REGION
-us-east-1
-```
+### Step 2: Create GitHub Environments
 
-## Add Secrets to GitHub
+Go to: `Settings → Environments`
 
-Go to your repository settings:
-`https://github.com/yourusername/your-repo/settings/secrets/actions`
+**Create "development" environment:**
+- Click "New environment"
+- Name: `development`
+- No protection rules needed
+- Add these secrets:
+  - `AWS_ROLE_ARN` → paste Dev role ARN from terminal
+  - `AWS_REGION` → `us-east-1`
 
-Click "New repository secret" and add:
+**Create "staging" environment:**
+- Name: `staging`
+- Optional: Add reviewers if you want
+- Add these secrets:
+  - `AWS_ROLE_ARN` → paste Staging role ARN from terminal
+  - `AWS_REGION` → `us-east-1`
 
-**First secret:**
-- Name: `AWS_ROLE_ARN`
-- Value: paste the ARN from terminal
+**Create "production" environment:**
+- Name: `production`
+- Enable "Required reviewers" and add yourself
+- Add these secrets:
+  - `AWS_ROLE_ARN` → paste Prod role ARN from terminal
+  - `AWS_REGION` → `us-east-1`
 
-**Second secret:**  
-- Name: `AWS_REGION`
-- Value: paste the region from terminal
+### Step 3: Delete Old Secrets
 
-If you have these old secrets, delete them:
+Go to: `Settings → Secrets and variables → Actions`
+
+If these exist, delete them:
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
+- `AWS_ROLE_ARN_DEV`
+- `AWS_ROLE_ARN_STAGING`
+- `AWS_ROLE_ARN_PROD`
 
-## Test It
+### Step 4: Test
 
-Push some code:
+Push to your dev branch:
 ```bash
 git checkout dev
-git add .
-git commit -m "test oidc"
+git commit -m "test" --allow-empty
 git push origin dev
 ```
 
-Check the Actions tab in GitHub. Your workflow should run successfully.
+Check the Actions tab to verify deployment works.
 
-## Optional: Use Minimal Permissions
+## Alternative: Single Role Setup
 
-The setup gives GitHub full AWS access by default. To limit permissions:
+If you don't need separate environments:
 
 ```bash
-cd github-oidc-setup
-node create-minimal-policy.js
+npm run setup
 ```
 
-This restricts the role to only what's needed for Next.js deployments.
+This creates one role for all environments. Then add secrets to repository (not environments):
+- `AWS_ROLE_ARN`
+- `AWS_REGION`
 
-## How It Works
+## Benefits of GitHub Environments
 
-When a workflow runs:
-1. GitHub requests authentication from AWS
-2. AWS verifies the request came from your repository
-3. AWS gives GitHub temporary credentials (valid 1 hour)
-4. GitHub uses those credentials to deploy
-5. Credentials expire automatically
+**Better organization:**
+- Each environment has its own secrets
+- All workflows use same secret names (`AWS_ROLE_ARN`, `AWS_REGION`)
+- No need for `_DEV`, `_STAGING`, `_PROD` suffixes
 
-This is more secure than storing permanent credentials.
+**Security:**
+- Production requires manual approval
+- See deployment history per environment
+- Restrict who can deploy to each environment
+
+**Visibility:**
+- GitHub shows which environment is deployed
+- See deployment status in UI
+- Better audit trail
+
+## Optional: Minimal Permissions
+
+For better security, restrict permissions after setup:
+
+```bash
+npm run setup:minimal
+```
+
+This replaces full AWS access with only what's needed for Next.js deployments.
+
+Note: This only updates one role at a time. You'll need to update the script for multi-environment or run it manually for each role.
+
+## What This Does
+
+Creates secure authentication between GitHub and AWS:
+- No permanent credentials stored in GitHub
+- Temporary tokens that expire after 1 hour
+- Only your specific repository/branch can authenticate
+- Each environment isolated with its own role
 
 ## Troubleshooting
 
-**Script fails with permission error:**
-Make sure AWS CLI is configured:
+**Find your role ARNs:**
 ```bash
-aws configure
+cat github-oidc-config.txt
 ```
 
-**Deployment fails after setup:**
-Try the minimal policy script. If that doesn't work, check CloudWatch logs to see what permission is missing.
+**"Access Denied" during deployment:**
+- Run `npm run setup:minimal`
+- Check CloudWatch logs for missing permissions
 
-**Want to verify setup:**
+**Want to start over:**
 ```bash
-aws iam get-role --role-name GitHubActionsDeployRole
+aws iam delete-role --role-name GitHubActionsDeployRole-Dev
+aws iam delete-role --role-name GitHubActionsDeployRole-Staging
+aws iam delete-role --role-name GitHubActionsDeployRole-Prod
+npm run setup:multi-env
 ```
 
-**Need to start over:**
+**Check current setup:**
 ```bash
-aws iam delete-role --role-name GitHubActionsDeployRole
-node setup-github-oidc.js
+aws iam get-role --role-name GitHubActionsDeployRole-Dev
+aws iam get-role --role-name GitHubActionsDeployRole-Staging
+aws iam get-role --role-name GitHubActionsDeployRole-Prod
 ```
 
-## Files Created
+## Files
 
-- `github-oidc-config.txt` - has your role ARN and other details
+- `setup-github-oidc.js` - single role setup
+- `setup-github-oidc-multi-env.js` - multi-environment setup (recommended)
+- `create-minimal-policy.js` - restricts permissions
+- `github-oidc-config.txt` - your config (created by script)
 
 ## Summary
 
 Total time: about 5 minutes
 
 Steps:
-1. Run setup script
-2. Add two secrets to GitHub  
-3. Push code to test
+1. Run `npm run setup:multi-env`
+2. Create three GitHub Environments
+3. Add two secrets to each environment
+4. Delete old secrets
+5. Push code to test
 
-That's it.
+Production deployments will require your approval.

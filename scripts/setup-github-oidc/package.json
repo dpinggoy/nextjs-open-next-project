@@ -5,13 +5,25 @@
   "main": "setup-github-oidc.js",
   "scripts": {
     "setup": "node setup-github-oidc.js",
+    "setup:multi-env": "node setup-github-oidc-multi-env.js",
     "setup:minimal": "node create-minimal-policy.js"
   },
-  "keywords": ["github", "oidc", "aws", "authentication"],
+  "keywords": [
+    "github",
+    "oidc",
+    "aws",
+    "authentication"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-iam": "^3.700.0",
     "@aws-sdk/client-sts": "^3.700.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0"
   }
 }

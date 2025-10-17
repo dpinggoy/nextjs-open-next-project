@@ -1,0 +1,61 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+        env:
+          NODE_ENV: production
+
+      - run: npm run build:open-next
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - run: npm run cdk:deploy:prod
+
+      - name: Get deployment URL
+        run: |
+          URL=$(aws cloudformation describe-stacks \
+            --stack-name nextjs-prod \
+            --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontURL`].OutputValue' \
+            --output text)
+          echo "Deployed to: $URL"
+
+      - name: Test deployment
+        run: |
+          URL=$(aws cloudformation describe-stacks \
+            --stack-name nextjs-prod \
+            --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontURL`].OutputValue' \
+            --output text)
+
+          curl -f "$URL" || exit 1
+          curl -f "$URL/api/health" || exit 1
+
+      - name: Tag release
+        run: |
+          git tag "v$(date +%Y%m%d-%H%M%S)"
+          git push origin --tags || true

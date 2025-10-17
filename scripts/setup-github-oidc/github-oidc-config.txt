@@ -1,0 +1,41 @@
+
+GitHub OIDC Configuration (Multi-Environment)
+Date: 2025-10-16T17:14:12.804Z
+Repository: dpinggoy/nextjs-open-next-project
+Region: us-east-1
+
+OIDC Provider: arn:aws:iam::324532610217:oidc-provider/token.actions.githubusercontent.com
+
+Development Environment (dev branch):
+Role ARN: arn:aws:iam::324532610217:role/GitHubActionsDeployRole-Dev
+Branch: dev
+
+Staging Environment (staging branch):
+Role ARN: arn:aws:iam::324532610217:role/GitHubActionsDeployRole-Staging
+Branch: staging
+
+Production Environment (main branch):
+Role ARN: arn:aws:iam::324532610217:role/GitHubActionsDeployRole-Prod
+Branch: main
+
+Add these secrets to GitHub:
+https://github.com/dpinggoy/nextjs-open-next-project/settings/secrets/actions
+
+For Development environment:
+AWS_ROLE_ARN_DEV
+arn:aws:iam::324532610217:role/GitHubActionsDeployRole-Dev
+
+For Staging environment:
+AWS_ROLE_ARN_STAGING
+arn:aws:iam::324532610217:role/GitHubActionsDeployRole-Staging
+
+For Production environment:
+AWS_ROLE_ARN_PROD
+arn:aws:iam::324532610217:role/GitHubActionsDeployRole-Prod
+
+AWS_REGION (same for all):
+us-east-1
+
+Then delete these old secrets if they exist:
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY

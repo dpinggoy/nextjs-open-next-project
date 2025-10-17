@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, staging, main]
+  push:
+    branches: [dev, staging, main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint Next.js
+        run: npm run lint
+
+      - name: Check Typescript
+        run: npx tsc --noEmit
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Run Tests
+        run: npm test
+        continue-on-error: true
+
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+
+        - uses: actions/setup-node@v4
+          with:
+            node-version: 20
+            cache: npm
+
+        - run: npm ci
+
+        - name: Build Next.js
+          run: npm run build
+
+        - name: Build Open Next
+          run: npm run build:open-next
+
+        - name: Check Build Output
+          run: |
+            if [ ! -d ".next" ]; then
+              echo "Next.js build failed"
+              exit 1
+            fi
+
+            if [ ! -d ".open-next"]; then
+              echo "Open Next build failed"
+              exit 1
+            fi
+
+            echo "Build successful"
