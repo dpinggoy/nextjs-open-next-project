@@ -39,34 +39,34 @@ jobs:
         run: npm test
         continue-on-error: true
 
-    build:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-        - uses: actions/setup-node@v4
-          with:
-            node-version: 20
-            cache: npm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
 
-        - run: npm ci
+      - run: npm ci
 
-        - name: Build Next.js
-          run: npm run build
+      - name: Build Next.js
+        run: npm run build
 
-        - name: Build Open Next
-          run: npm run build:open-next
+      - name: Build Open Next
+        run: npm run build:open-next
 
-        - name: Check Build Output
-          run: |
-            if [ ! -d ".next" ]; then
-              echo "Next.js build failed"
-              exit 1
-            fi
+      - name: Check Build Output
+        run: |
+          if [ ! -d ".next" ]; then
+            echo "Next.js build failed"
+            exit 1
+          fi
 
-            if [ ! -d ".open-next"]; then
-              echo "Open Next build failed"
-              exit 1
-            fi
+          if [ ! -d ".open-next"]; then
+            echo "Open Next build failed"
+            exit 1
+          fi
 
-            echo "Build successful"
+          echo "Build successful"
