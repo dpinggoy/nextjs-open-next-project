@@ -10,19 +10,19 @@ export interface Todo {
 
 // In-memory storage (works with Lambda, but resets on cold starts)
 // For production, use a database like dynamoDB
-let todos: Todo[] = [
-    {
-        id: '1',
-        title: 'Deploy Next.js app with OpenNext on AWS',
-        completed: true,
-        createdAt: new Date().toISOString()
-    },
-    {
-        id: '2',
-        title: 'Build a Todo App',
-        completed: false,
-        createdAt: new Date().toISOString()
-    }
+const todos: Todo[] = [
+  {
+    id: '1',
+    title: 'Deploy Next.js app to AWS',
+    completed: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    title: 'Build CRUD functionality',
+    completed: false,
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 export async function GET() {
