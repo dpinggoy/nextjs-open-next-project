@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main style={{ padding: '2rem', fontFamily: 'system-ui' }}>
@@ -20,6 +22,21 @@ export default function Home() {
         </ul>
       </div>
 
+      <div style={{ marginTop: '2rem' }}>
+        <Link 
+          href="/todos" style={{
+            display: 'inline-block',
+            padding: '12px 24px',
+            backgroundColor: '#0070f3',
+            color: 'white',
+            textDecoration: 'none',
+            borderRadius: '8px',
+            fontWeight: 'bold'
+          }}
+        >
+         Open Todo App
+        </Link>
+      </div>
       <div style={{ marginTop: '2rem' }}>
         <a 
           href="/api/health" 
