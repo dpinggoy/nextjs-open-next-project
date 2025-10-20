@@ -1,5 +1,4 @@
 name: Deploy Staging
-
 on:
   push:
     branches: [staging]
@@ -11,31 +10,23 @@ permissions:
 
 jobs:
   deploy:
-    needs: ci
     runs-on: ubuntu-latest
     environment: staging
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
       - run: npm ci
-
       - run: npm run build
-
       - run: npm run build:open-next
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-
       - run: npm run cdk:deploy:staging
-
       - name: Get deployment URL
         run: |
           URL=$(aws cloudformation describe-stacks \
@@ -43,7 +34,6 @@ jobs:
             --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontURL`].OutputValue' \
             --output text)
           echo "Deployed to: $URL"
-
       - name: Smoke test
         run: |
           URL=$(aws cloudformation describe-stacks \
