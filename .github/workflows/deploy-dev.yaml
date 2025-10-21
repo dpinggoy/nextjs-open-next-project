@@ -47,18 +47,10 @@ jobs:
 
             - name: Invalidate CloudFront cache
               run: |
-                  echo "Listing all CloudFront distributions..."
-                  aws cloudfront list-distributions \
-                    --query 'DistributionList.Items[].[Id, DomainName]' \
-                    --output table
-
-                  echo "Attempting to invalidate all distributions (safest approach)..."
-                  for DIST_ID in $(aws cloudfront list-distributions --query 'DistributionList.Items[].Id' --output text); do
-                    echo "Invalidating distribution: $DIST_ID"
-                    aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*" || true
-                  done
-
-                  echo "Cache invalidation complete"
+                  aws cloudfront create-invalidation \
+                    --distribution-id {{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+                    --paths "/*"
+                  echo "Cache invalidated."
 
             - name: Show deployment URL
               run: |
