@@ -104,7 +104,7 @@ export class NextjsStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'CDNDistributionId', { 
       value: this.cdn.distribution.distributionId,
       description: 'CloudFront Distribution ID',
-      exportName: `${id}-DistributionId`
+      exportName: `${this.stackName}-DistributionId`
     });
   }
 }

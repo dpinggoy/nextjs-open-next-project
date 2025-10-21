@@ -38,19 +38,21 @@ jobs:
             - name: Get CloudFront Distribution ID
               id: cloudfront
               run: |
-                  DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
-                    --stack-name nextjs-dev \
-                    --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontDistributionID`].OutputValue' \
-                    --output text)
-                  echo "DISTRIBUTION_ID=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
-
                   URL=$(aws cloudformation describe-stacks \
                     --stack-name nextjs-dev \
                     --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontURL`].OutputValue' \
                     --output text)
                   echo "url=$URL" >> $GITHUB_OUTPUT
 
+                  # Extract distribution ID from CloudFront distribution
+                  DISTRIBUTION_ID=$(aws cloudfront list-distributions \
+                    --query "DistributionList.Items[?Comment=='nextjs-dev' || contains(Origins.Items[0].DomainName, 'nextjs-dev')].Id | [0]" \
+                    --output text)
+                  echo "distribution_id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+                  echo "Found Distribution ID: $DISTRIBUTION_ID"
+
             - name: Invalidate CloudFront Cache
+              if: steps.cloudfront.outputs.distribution_id != ''
               run: |
                   aws cloudfront create-invalidation \
                     --distribution-id ${{ steps.cloudfront.outputs.distribution_id }} \
