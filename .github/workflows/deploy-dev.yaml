@@ -35,10 +35,27 @@ jobs:
 
             - run: npm run cdk:deploy:dev
 
-            - name: Get deployment URL
+            - name: Get CloudFront Distribution ID
+              id: cloudfront
               run: |
+                  DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+                    --stack-name nextjs-dev \
+                    --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontDistributionID`].OutputValue' \
+                    --output text)
+                  echo "DISTRIBUTION_ID=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+
                   URL=$(aws cloudformation describe-stacks \
                     --stack-name nextjs-dev \
                     --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontURL`].OutputValue' \
                     --output text)
-                  echo "Deployed to: $URL"
+                  echo "url=$URL" >> $GITHUB_OUTPUT
+
+            - name: Invalidate CloudFront Cache
+              run: |
+                  aws cloudfront create-invalidation \
+                    --distribution-id ${{ steps.cloudfront.outputs.DISTRIBUTION_ID }} \
+                    --paths "/*"
+                  echo "✅ Cache invalidated"
+            
+            - name: Show deployment URL
+              run: echo "🌎 Application deployed at: ${{ steps.cloudfront.outputs.url }}"

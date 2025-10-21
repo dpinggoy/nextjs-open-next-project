@@ -100,5 +100,11 @@ export class NextjsStack extends cdk.Stack {
       value: this.stackName,
       description: 'CloudFormation Stack Name'
     });
+
+    new cdk.CfnOutput(this, 'CDNDistributionId', { 
+      value: this.cdn.distribution.distributionId,
+      description: 'CloudFront Distribution ID',
+      exportName: `${id}-DistributionId`
+    });
   }
 }
