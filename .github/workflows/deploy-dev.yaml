@@ -56,6 +56,6 @@ jobs:
                     --distribution-id ${{ steps.cloudfront.outputs.DISTRIBUTION_ID }} \
                     --paths "/*"
                   echo "✅ Cache invalidated"
-            
+
             - name: Show deployment URL
-              run: echo "🌎 Application deployed at: ${{ steps.cloudfront.outputs.url }}"
+              run: echo "🌎 Application deployed at ${{ steps.cloudfront.outputs.url }}"
